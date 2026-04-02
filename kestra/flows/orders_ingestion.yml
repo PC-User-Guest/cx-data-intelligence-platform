@@ -1,0 +1,33 @@
+id: orders_ingestion
+namespace: sentiment_platform.ingestion
+description: Daily incremental ingestion of Olist order data.
+
+labels:
+  layer: ingestion
+  source: olist_orders
+
+tasks:
+  - id: log_start
+    type: io.kestra.plugin.core.log.Log
+    message: "Starting orders ingestion pipeline run"
+
+  - id: run_orders_pipeline
+    type: io.kestra.plugin.docker.Run
+    containerImage: platform-pipelines:1.1.0
+    pullPolicy: IF_NOT_PRESENT
+    commands:
+      - "python -m pipelines.orders_pipeline"
+    timeout: PT20M
+    retry:
+      type: constant
+      interval: PT60S
+      maxAttempt: 3
+
+  - id: log_finish
+    type: io.kestra.plugin.core.log.Log
+    message: "Orders ingestion pipeline completed"
+
+triggers:
+  - id: daily_midnight
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 0 * * *"

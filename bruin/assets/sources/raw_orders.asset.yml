@@ -1,0 +1,3 @@
+name: raw_zone.raw_orders
+type: bq.source
+description: Raw order events loaded by dlt orders pipeline.

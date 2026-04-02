@@ -1,0 +1,45 @@
+id: ticket_ingestion
+namespace: sentiment_platform.ingestion
+description: Incremental ingestion of support tickets every 15 minutes.
+
+labels:
+  layer: ingestion
+  source: simulated_ticket_api
+
+tasks:
+  - id: log_start
+    type: io.kestra.plugin.core.log.Log
+    message: "Starting ticket ingestion pipeline run"
+
+  - id: validate_ticket_api_contract
+    type: io.kestra.plugin.docker.Run
+    containerImage: platform-pipelines:1.1.0
+    pullPolicy: IF_NOT_PRESENT
+    commands:
+      - "sh -lc 'newman run /app/postman/live_ticket_api.postman_collection.json --env-var ticketsApiUrl=${TICKETS_API_URL:-http://localhost:9000/api/tickets} --timeout-request 30000 --bail'"
+    timeout: PT5M
+    retry:
+      type: constant
+      interval: PT60S
+      maxAttempt: 2
+
+  - id: run_tickets_pipeline
+    type: io.kestra.plugin.docker.Run
+    containerImage: platform-pipelines:1.1.0
+    pullPolicy: IF_NOT_PRESENT
+    commands:
+      - "python -m pipelines.tickets_pipeline"
+    timeout: PT10M
+    retry:
+      type: constant
+      interval: PT60S
+      maxAttempt: 3
+
+  - id: log_finish
+    type: io.kestra.plugin.core.log.Log
+    message: "Ticket ingestion pipeline completed"
+
+triggers:
+  - id: every_15_minutes
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "*/15 * * * *"

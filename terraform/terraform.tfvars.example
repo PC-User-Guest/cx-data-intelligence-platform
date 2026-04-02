@@ -1,0 +1,17 @@
+project_id  = "your-gcp-project-id"
+region      = "europe-west1"
+location    = "EU"
+environment = "dev"
+
+labels = {
+  owner_team = "data-platform"
+  cost_center = "cx-analytics"
+}
+
+create_runtime_service_account = true
+runtime_service_account_id     = "sentiment-platform-runtime"
+
+runtime_project_roles = [
+  "roles/bigquery.dataEditor",
+  "roles/bigquery.jobUser"
+]

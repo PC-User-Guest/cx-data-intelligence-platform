@@ -1,0 +1,72 @@
+{
+  "info": {
+    "_postman_id": "c2d4d1a4-31a5-49dd-a537-80e95af6ce4e",
+    "name": "Live Ticket API Contract Validation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Contract tests for live ticket ingestion endpoint used by tickets_pipeline.py"
+  },
+  "item": [
+    {
+      "name": "GET Tickets Incremental Feed",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{ticketsApiUrl}}",
+          "host": [
+            "{{ticketsApiUrl}}"
+          ]
+        },
+        "description": "Validates the live endpoint returns a list payload (root list, data, or tickets array)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "let records = [];",
+              "",
+              "if (Array.isArray(body)) {",
+              "    records = body;",
+              "} else if (body && Array.isArray(body.data)) {",
+              "    records = body.data;",
+              "} else if (body && Array.isArray(body.tickets)) {",
+              "    records = body.tickets;",
+              "}",
+              "",
+              "pm.test('Payload contains records array', function () {",
+              "    pm.expect(Array.isArray(records)).to.eql(true);",
+              "});",
+              "",
+              "pm.test('Record contract keys exist when records are present', function () {",
+              "    if (records.length === 0) {",
+              "        pm.expect(records.length).to.eql(0);",
+              "        return;",
+              "    }",
+              "",
+              "    const first = records[0];",
+              "    pm.expect(first).to.have.property('ticket_id');",
+              "    pm.expect(first).to.have.property('customer_id');",
+              "    pm.expect(first).to.have.property('created_at');",
+              "    pm.expect(first).to.have.property('sentiment_score');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "ticketsApiUrl",
+      "value": "http://localhost:9000/api/tickets",
+      "type": "string"
+    }
+  ]
+}

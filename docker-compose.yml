@@ -1,0 +1,36 @@
+services:
+  pipelines-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: "${PIPELINES_IMAGE:-platform-pipelines:1.1.0}"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  kestra:
+    image: "${KESTRA_IMAGE:-kestra/kestra:0.20.20}"
+    container_name: kestra
+    command: server local
+    ports:
+      - "${KESTRA_BIND_ADDRESS:-127.0.0.1}:${KESTRA_PORT:-18081}:8080"
+    volumes:
+      - ./kestra/flows:/app/flows
+    environment:
+      KESTRA_CONFIGURATION: |
+        kestra:
+          server:
+            basic-auth:
+              enabled: true
+              username: "${KESTRA_BASIC_AUTH_USERNAME:-admin}"
+              password: "${KESTRA_BASIC_AUTH_PASSWORD:-change-me-now}"
+    restart: unless-stopped
+
+  dashboard:
+    image: nginx:1.27-alpine
+    container_name: dashboard
+    ports:
+      - "${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-18080}:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+    restart: unless-stopped

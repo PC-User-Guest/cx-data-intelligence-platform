@@ -1,0 +1,43 @@
+# Secrets and local credentials
+.env
+.env.local
+.env.*.local
+.runtime/
+
+# Local Bruin overrides
+.bruin.yml
+
+# Python cache and virtual artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+
+# dlt local state
+.dlt/
+
+# Logs and run artifacts
+logs/
+*.log
+
+# Terraform local state and overrides
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+terraform.tfvars
+
+# Postman local exports
+postman/environments/*.local.postman_environment.json
+
+# OS/editor clutter
+.DS_Store
+Thumbs.db
+.vscode/
+logs/runs
+logs/*.log

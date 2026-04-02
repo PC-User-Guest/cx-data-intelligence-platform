@@ -1,0 +1,44 @@
+id: transform_dashboard
+namespace: sentiment_platform.transform
+description: Run bruin SQL transformations and refresh dashboard queries.
+
+labels:
+  layer: transform
+  engine: bruin
+
+tasks:
+  - id: log_start
+    type: io.kestra.plugin.core.log.Log
+    message: "Starting SQL transformation and dashboard refresh"
+
+  - id: run_bruin
+    type: io.kestra.plugin.docker.Run
+    containerImage: platform-pipelines:1.1.0
+    pullPolicy: IF_NOT_PRESENT
+    commands:
+      - "python -m pipelines.prepare_gcp_credentials"
+      - "sh -lc 'cd /app/bruin && bruin run'"
+    timeout: PT20M
+    retry:
+      type: constant
+      interval: PT60S
+      maxAttempt: 3
+
+  - id: log_finish
+    type: io.kestra.plugin.core.log.Log
+    message: "Transformation and dashboard refresh completed"
+
+triggers:
+  - id: after_ticket_ingestion
+    type: io.kestra.plugin.core.trigger.Flow
+    namespace: sentiment_platform.ingestion
+    flowId: ticket_ingestion
+    states:
+      - SUCCESS
+
+  - id: after_orders_ingestion
+    type: io.kestra.plugin.core.trigger.Flow
+    namespace: sentiment_platform.ingestion
+    flowId: orders_ingestion
+    states:
+      - SUCCESS
