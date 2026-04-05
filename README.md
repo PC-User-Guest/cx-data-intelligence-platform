@@ -4,6 +4,9 @@
 
 This repository delivers a production-grade MVP that correlates customer sentiment with operational delivery performance. The platform implements deterministic orchestration, layered warehouse modeling, idempotent ingestion, infrastructure as code, and API contract validation.
 
+## Live Dashboard
+<img width="1186" height="807" alt="image" src="https://github.com/user-attachments/assets/e8e64c4a-0dea-4596-8792-0154710f7800" />
+
 ---
 
 ## Enterprise Capabilities
