@@ -1,20 +1,24 @@
 # Real-Time Customer Sentiment and Operational Efficiency Platform
 
-Release: v1.1.0
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository delivers a production-grade MVP for correlating customer sentiment with operational delivery performance. It is implemented with deterministic orchestration, layered warehouse modeling, idempotent ingestion, infrastructure as code, and API contract validation.
+This repository delivers a production-grade MVP that correlates customer sentiment with operational delivery performance. The platform implements deterministic orchestration, layered warehouse modeling, idempotent ingestion, infrastructure as code, and API contract validation.
 
-## 1. Enterprise Architecture
+---
 
-Core platform technologies:
+## Enterprise Capabilities
 
-- Python and dlt for incremental ingestion
-- Kestra for orchestration and scheduling
-- BigQuery for lakehouse-style storage and compute
-- Bruin for SQL asset DAG execution
-- Terraform for infrastructure baseline and IAM controls
-- Postman and Newman for ticket API contract gates
-- Nginx for static dashboard delivery
+- **Incremental & idempotent ingestion** using `dlt` merge semantics
+- **Dead-letter handling** with a standardized schema and non-blocking pipeline continuation
+- **Structured JSON logging** for traceable execution diagnostics
+- **Kestra orchestration** with retries, timeouts, and dependency management
+- **Newman pre-ingestion contract gating** to enforce API compatibility
+- **Terraform-backed reproducibility** for core infrastructure (BigQuery, IAM, datasets)
+- **Bruin SQL DAG execution** for layered warehouse modeling (raw → staging → core → enrichment → dashboard)
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -92,33 +96,96 @@ flowchart LR
   I1 --> C1
   I2 --> C2
   I3 --> B1
+
 ```
 
-Additional release lifecycle view (PlantUML):
+---
 
-```plantuml
-@startuml
-title Release Readiness Lifecycle
-start
-:Implement feature;
-:Run local validation gates;
-:Review against PR checklist;
-if (All blocking gates pass?) then (yes)
-  :Prepare release artifacts;
-  :Go/No-Go decision;
-  if (Approved?) then (yes)
-    :Release v1.0.0;
-  else (no)
-    :Return to remediation;
-  endif
-else (no)
-  :Fix defects and rerun checks;
-endif
-stop
-@enduml
+## Release Lifecycle View
+
+```mermaid
+flowchart TD
+    A([Start]) --> B[Implement feature]
+    B --> C[Run local validation gates]
+    C --> D[Review against PR checklist]
+    D --> E{All blocking gates pass?}
+
+    E -- Yes --> F[Prepare release artifacts]
+    F --> G[Go/No-Go decision]
+    G --> H{Approved?}
+
+    H -- Yes --> I[Release v1.0.0]
+    H -- No --> J[Return to remediation]
+
+    E -- No --> K[Fix defects and rerun checks]
+
+    I --> L([Stop])
+    J --> L
+    K --> L
+
 ```
 
-## 2. Workflow Execution
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.9+
+- Docker and Docker Compose
+- Terraform (≥1.8) – optional, for infrastructure provisioning
+- Google Cloud project with BigQuery enabled (for production deployment)
+
+### Installation
+
+```bash
+git clone <repository-url>
+cd customer-sentiment-platform
+pip install -r requirements.txt
+```
+
+### Basic Validation
+
+Run the full validation suite locally:
+
+```bash
+# Unit tests
+python -m pytest -q
+
+# Docker Compose configuration
+docker compose config -q
+
+# Terraform format and validation (no backend)
+cd terraform
+docker run --rm -v "${PWD}:/workspace" -w /workspace hashicorp/terraform:1.8.5 fmt -check -recursive
+docker run --rm -v "${PWD}:/workspace" -w /workspace hashicorp/terraform:1.8.5 init -backend=false
+docker run --rm -v "${PWD}:/workspace" -w /workspace hashicorp/terraform:1.8.5 validate
+cd ..
+
+# Start all services
+docker compose up --build -d
+```
+
+### Optional Pipeline Execution
+
+Run ingestion pipelines directly (bypassing Kestra):
+
+```bash
+python -m pipelines.tickets_pipeline
+python -m pipelines.orders_pipeline
+```
+
+Execute the Bruin transformation DAG:
+
+```bash
+python -m pipelines.prepare_gcp_credentials
+cd bruin
+bruin run --config-file .bruin.yml
+```
+
+---
+
+## Workflow Execution
 
 ```mermaid
 sequenceDiagram
@@ -144,224 +211,186 @@ sequenceDiagram
   K->>BR: Trigger transform flow
   BR->>BQ: Build staging/core/enrichment/dashboard assets
   BQ->>UI: Serve latest dashboard outputs
+
 ```
 
-## 3. Project Structure
+---
 
-- pipelines/: ingestion workloads and shared helpers
-- kestra/flows/: scheduled and dependency-triggered workflows
-- bruin/assets/: source, staging, core, enrichment, dashboard SQL assets
-- postman/: live API contract collection and environments
-- terraform/: infrastructure baseline for APIs, datasets, IAM
-- dashboard/: static enterprise-facing operational UI
-- tests/: unit tests for ingestion and reliability helpers
-- docs/: operational runbook
-- PR_tasks.md: release code review checklist
-- activity_tracking.md: implementation plan expectation-vs-actual tracking
+## Project Structure
 
-## 4. Local and Release Validation Commands
+```
+.
+├── pipelines/                # Ingestion workloads and shared helpers
+├── kestra/flows/             # Scheduled and dependency-triggered workflows
+├── bruin/assets/             # SQL assets (source, staging, core, enrichment, dashboard)
+├── postman/                  # Live API contract collection and environments
+├── terraform/                # Infrastructure baseline (APIs, datasets, IAM)
+├── dashboard/                # Static enterprise-facing operational UI (Nginx)
+├── tests/                    # Unit tests for ingestion and reliability helpers
+├── docs/                     # Operational runbook
+├── PR_tasks.md               # Release code review checklist
+├── activity_tracking.md      # Expectation vs. actual tracking
+└── requirements.txt
+```
 
-1. Install dependencies
+---
 
-pip install -r requirements.txt
+## Validation and Testing Commands
 
-2. Run test suite
+| Command | Purpose |
+|---------|---------|
+| `pip install -r requirements.txt` | Install dependencies |
+| `python -m pytest -q` | Run unit test suite |
+| `docker compose config -q` | Validate Compose configuration |
+| `docker run ... terraform fmt -check -recursive` | Check Terraform formatting |
+| `docker run ... terraform validate` | Validate Terraform configuration |
+| `newman run postman/live_ticket_api.postman_collection.json --env-var ticketsApiUrl=<url>` | Run API contract checks |
+| `docker compose up --build -d` | Start all services |
 
-python -m pytest -q
+> **Production Terraform backend:**  
+> `docker run ... terraform init -backend-config=backend.hcl`
 
-3. Validate container composition
+---
 
-docker compose config -q
+## Reliability and Enterprise Controls
 
-4. Validate Terraform
+- **Incremental & idempotent ingestion** – `dlt` merge semantics prevent duplicate processing.
+- **Structured JSON logging** – Enables traceable execution diagnostics.
+- **Dead-letter handling** – Non-blocking pipeline continuation with a standardized failure schema.
+- **Kestra retries & timeouts** – Resilient orchestration for transient failures.
+- **Newman pre-ingestion contract gating** – Blocks ingestion on API contract regressions.
+- **Terraform-backed reproducibility** – Infrastructure dependencies (BigQuery datasets, IAM) are versioned and repeatable.
 
-docker run --rm -v "${PWD}:/workspace" -w /workspace/terraform hashicorp/terraform:1.8.5 fmt -check -recursive
-docker run --rm -v "${PWD}:/workspace" -w /workspace/terraform hashicorp/terraform:1.8.5 init -backend=false
-docker run --rm -v "${PWD}:/workspace" -w /workspace/terraform hashicorp/terraform:1.8.5 validate
+---
 
-Production backend initialization (recommended):
+## Performance Metrics
 
-docker run --rm -v "${PWD}:/workspace" -w /workspace/terraform hashicorp/terraform:1.8.5 init -backend-config=backend.hcl
-
-5. Run API contract checks
-
-docker run --rm -v "${PWD}:/app" -w /app platform-pipelines:latest sh -lc "newman run /app/postman/live_ticket_api.postman_collection.json --env-var ticketsApiUrl=http://host.docker.internal:9000/api/tickets --bail"
-
-6. Start services
-
-docker compose up --build -d
-
-7. Optional direct pipeline execution
-
-python -m pipelines.tickets_pipeline
-python -m pipelines.orders_pipeline
-
-8. Optional Bruin execution
-
-python -m pipelines.prepare_gcp_credentials
-cd bruin
-bruin run --config-file .bruin.yml
-
-## 5. Reliability and Enterprise Controls
-
-- Incremental and idempotent ingestion with dlt merge semantics
-- Structured JSON logging for traceable execution diagnostics
-- Dead-letter handling with standardized schema and non-blocking pipeline continuation
-- Kestra retries and timeouts for resilient orchestration
-- Newman pre-ingestion contract gating for API compatibility safety
-- Terraform-backed reproducibility for key infrastructure dependencies
-
-## 6. Project Performance Metrics
-
-Latest measured validation baselines (release preparation run):
+Baseline measurements from release preparation runs:
 
 | Metric | Target | Observed | Status |
-|---|---:|---:|---|
-| Unit tests | 100% pass | 8/8 passed in 8.80s | Pass |
-| Compose validation | Valid config | docker compose config passed | Pass |
-| Terraform format and validate | No errors | fmt check + validate passed | Pass |
-| API contract gate | 100% assertions pass | 3/3 assertions passed, avg 314ms | Pass |
-| Bruin transform DAG | 100% assets pass | 8/8 assets succeeded, 21.445s | Pass |
-| Ticket ingestion runtime | < 5 min | ~49s in validated run | Pass |
-| Orders ingestion runtime | < 10 min | ~29s in validated run | Pass |
+| :--- | :---: | :---: | :--- |
+| Unit tests | 100% pass | 8/8 passed in 8.80s | ✅ Pass |
+| Compose validation | Valid config | `docker compose config` passed | ✅ Pass |
+| Terraform format & validate | No errors | fmt + validate passed | ✅ Pass |
+| API contract gate | 100% assertions | 3/3 passed, avg 314ms | ✅ Pass |
+| Bruin transform DAG | 100% assets | 8/8 succeeded, 21.445s | ✅ Pass |
+| Ticket ingestion runtime | < 5 min | ~49s | ✅ Pass |
+| Orders ingestion runtime | < 10 min | ~29s | ✅ Pass |
 
-Operational warehouse snapshot observed during end-to-end validation:
+**Warehouse snapshot during end-to-end validation:**
 
-- raw_zone.raw_tickets: 52 rows
-- raw_zone.raw_orders: 99,441 rows
-- staging.stg_tickets: 52 rows
-- staging.stg_orders: 99,441 rows
-- core.fact_sentiment_daily: 33 rows
+- `raw_zone.raw_tickets`: 52 rows
+- `raw_zone.raw_orders`: 99,441 rows
+- `staging.stg_tickets`: 52 rows
+- `staging.stg_orders`: 99,441 rows
+- `core.fact_sentiment_daily`: 33 rows
 
-## 7. Scaling and Performance Analysis
+---
 
-Current scale profile:
+## Scaling and Performance Analysis
 
-- Ticket flow: designed for 15-minute cadence with low-latency incremental pulls
-- Orders flow: daily bulk batch with schema-safe casting and deduplication
-- Transform flow: compact SQL DAG with sub-minute to low-minute execution at MVP data volumes
+### Current Profile
 
-Likely bottlenecks as volume grows:
+- **Ticket flow** – 15-minute cadence, low-latency incremental pulls.
+- **Orders flow** – Daily bulk batch with schema-safe casting and deduplication.
+- **Transform flow** – Compact SQL DAG with sub-minute to low-minute execution at MVP volumes.
 
-- API response latency and pagination limits on ticket source
-- BigQuery query cost and slot contention under higher dashboard refresh frequency
-- Transform DAG window growth if retention and historical backfills increase
+### Identified Bottlenecks
 
-Scale-up strategy:
+- API response latency and pagination limits on the ticket source.
+- BigQuery query cost and slot contention under higher dashboard refresh frequency.
+- Transform DAG window growth with increased retention and historical backfills.
 
-1. Source/API layer
-- Introduce explicit pagination loops and backpressure controls
-- Tune retry intervals based on provider-specific rate-limit headers
+### Scale-Up Strategy
 
-2. Warehouse layer
-- Keep partition and clustering strategy optimized for query predicates
-- Introduce incremental model patterns for larger historical windows
-- Implement cost guardrails and scheduled usage reviews
+1. **Source/API layer** – Introduce explicit pagination loops, backpressure controls, and rate-limit–aware retries.
+2. **Warehouse layer** – Optimize partitioning/clustering for query predicates, adopt incremental model patterns for larger windows, and implement cost guardrails.
+3. **Orchestration layer** – Separate high-frequency ingestion from heavier transforms, add SLA-based freshness/failure alerting.
+4. **Infrastructure layer** – Extend Terraform modules for production deployment, promote environment-specific `tfvars` with peer-reviewed changes.
 
-3. Orchestration layer
-- Separate high-frequency ingestion and heavier transform windows
-- Add SLA-based alerting on freshness and failure thresholds
+---
 
-4. Infrastructure layer
-- Extend Terraform modules for production deployment infrastructure
-- Promote environment-specific tfvars with peer-reviewed change controls
+## Troubleshooting Runbook
 
-## 8. Troubleshooting Runbook
+Refer to the detailed operational runbook: [`docs/runbook.md`](docs/runbook.md)
 
-Primary runbook file:
+| Incident | Symptoms | Resolution |
+| :--- | :--- | :--- |
+| Ticket API unavailable | Connection refused in tickets pipeline | Validate endpoint with Newman/Postman; restore availability |
+| Newman contract failure | `validate_ticket_api_contract` task fails | Inspect response contract drift; resolve upstream API/schema mismatch |
+| Bruin ADC credential failure | Bruin cannot locate default credentials | Run `pipelines.prepare_gcp_credentials` and map ADC path |
+| Terraform init/validate failure | Provider or schema validation errors | Re-run `init -backend=false`, then `fmt` and `validate` |
 
-- docs/runbook.md
+---
 
-Most common operational incidents:
+## Infrastructure as Code (Terraform)
 
-1. Ticket API unavailable
-- Symptom: connection refused in tickets pipeline
-- Action: validate endpoint with Newman/Postman and restore endpoint availability
+The `terraform/` directory provisions:
 
-2. Newman contract failure in Kestra preflight
-- Symptom: validate_ticket_api_contract task fails
-- Action: inspect response contract drift and resolve upstream API/schema mismatch
-
-3. Bruin ADC credential failure
-- Symptom: Bruin cannot locate default credentials
-- Action: execute pipelines.prepare_gcp_credentials and map ADC path in runtime context
-
-4. Terraform init/validate failure
-- Symptom: provider or schema validation errors
-- Action: rerun init with backend disabled, then fmt and validate
-
-## 9. Terraform Scope
-
-Implemented Terraform scope in terraform/:
-
-- Required APIs: BigQuery and IAM
-- Datasets: raw_zone, staging, core, enrichment, dashboard
-- Optional runtime service account and BigQuery project roles
+- **Required APIs** – BigQuery and IAM
+- **Datasets** – `raw_zone`, `staging`, `core`, `enrichment`, `dashboard`
+- **Optional runtime service account** and BigQuery project roles
 - Typed variables and outputs for environment-safe usage
 
-Current scope intentionally excludes VM provisioning module and remote state backend configuration. Those are suitable as post-MVP hardening items.
+> **Note:** VM provisioning modules and remote state backend configuration are intentionally deferred as post-MVP hardening items.
 
-## 10. Postman and Contract Governance Scope
+---
 
-Implemented Postman assets:
+## API Contract Governance (Postman)
 
-- postman/live_ticket_api.postman_collection.json
-- postman/environments/local.postman_environment.json
-- postman/environments/production.template.postman_environment.json
+Implemented assets:
 
-Governance model:
+- `postman/live_ticket_api.postman_collection.json`
+- `postman/environments/local.postman_environment.json`
+- `postman/environments/production.template.postman_environment.json`
 
-- Contract checks are integrated as mandatory preflight in ticket_ingestion flow
-- Ingestion is blocked on API contract regression
+**Governance model:** Contract checks run as a mandatory pre-flight step in the `ticket_ingestion` flow. Ingestion is blocked if the API contract regresses.
 
-## 11. Release Readiness Artifacts
+---
 
-- PR_tasks.md: pull request and release sign-off checklist
-- activity_tracking.md: implementation plan expectation-vs-actual mapping
-- Workflow_procecess.md: development and production operational governance
+## Release Readiness Artifacts
 
-## 12. Contributing
+- `PR_tasks.md` – Pull request and release sign-off checklist
+- `activity_tracking.md` – Expectation vs. actual mapping for implementation plan
+- `Workflow_procecess.md` – Development and production operational governance
 
-Contributing process and mandatory validation gates are documented in:
+---
 
-- CONTRIBUTING.md
+## Contributing
 
-All pull requests should include:
+All contributions must follow the process and mandatory validation gates documented in [`CONTRIBUTING.md`](CONTRIBUTING.md). Every pull request should include:
 
 - Scope summary
 - Validation evidence
 - Risk and rollback notes
-- Documentation updates where behavior changed
+- Documentation updates for any behavioral changes
 
-## 13. Release License
+---
 
-This project is released under the MIT License.
+## License
 
-- LICENSE
+This project is released under the **MIT License** – see the [`LICENSE`](LICENSE) file for details.
 
-## 14. Version
+---
 
-Current release version:
+## Version
 
-- 1.0.0
+**Current release:** `1.2.0`  
+Version sources: `VERSION` file and the README header.
 
-Version sources:
+**Versioning scheme (Semantic Versioning):**
 
-- VERSION
-- This README release header
+- **MAJOR** – Breaking architecture or contract changes
+- **MINOR** – Backward-compatible feature additions
+- **PATCH** – Fixes, hardening, and documentation maintenance
 
-Recommended versioning model:
+---
 
-- Semantic versioning: MAJOR.MINOR.PATCH
-- MAJOR for breaking architecture/contract changes
-- MINOR for backward-compatible feature additions
-- PATCH for fixes, hardening, and documentation-only maintenance
+## Known Deferred Enterprise Hardening Items
 
-## 15. Known Deferred Enterprise Hardening Items
+The following controls are intentionally deferred for future releases:
 
-The following controls are intentionally deferred and tracked for future releases:
-
-- Full CI/CD workflow automation in repository
+- Full CI/CD workflow automation in the repository
 - Centralized audit logging and compliance integration
 - High-volume synthetic load-testing suite with automated thresholds
 - Production-grade remote Terraform state governance
