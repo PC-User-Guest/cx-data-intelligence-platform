@@ -126,7 +126,56 @@ Actions:
 - docker compose config -q
 - Terraform fmt/init/validate
 - Newman contract run
+- python scripts/compliance_check.py --output compliance_report.json
+- python scripts/synthetic_load_test.py --output synthetic_load_report.json
 - Optional end-to-end data run and warehouse row count verification
+
+## 9. Centralized Audit and Compliance
+
+Controls:
+
+- Pipelines emit append-only audit events to AUDIT_LOG_PATH in JSONL format
+- Every run carries run_id correlation for traceability across start/completion/failure events
+- Compliance baseline can be validated with scripts/compliance_check.py
+
+Actions:
+
+- Ensure AUDIT_ENABLED=true in environment
+- Ensure AUDIT_LOG_PATH points to a persisted mount in containerized runtime
+- Run python scripts/compliance_check.py --output compliance_report.json
+- Review controls with failed status before promotion
+
+## 10. Synthetic Load Threshold Suite
+
+Purpose:
+
+- Validate high-volume parser and dedupe behavior without paid infrastructure
+
+Actions:
+
+- Run python scripts/synthetic_load_test.py --output synthetic_load_report.json
+- Override thresholds with environment variables when profiling hardware variability:
+	- SYNTHETIC_TICKET_RECORDS
+	- SYNTHETIC_ORDER_RECORDS
+	- SYNTHETIC_MAX_TICKET_SECONDS
+	- SYNTHETIC_MAX_ORDER_SECONDS
+	- SYNTHETIC_MAX_DEDUPE_SECONDS
+
+## 11. Remote Terraform State Governance
+
+State bucket bootstrap:
+
+- cd terraform/state_bootstrap
+- terraform init
+- terraform plan -var-file=terraform.tfvars
+- terraform apply -var-file=terraform.tfvars
+
+Runtime initialization of main Terraform stack:
+
+- cd terraform
+- cp backend.hcl.example backend.hcl
+- Update bucket, prefix, kms_encryption_key, and impersonate_service_account
+- terraform init -backend-config=backend.hcl
 
 ## Escalation Path
 

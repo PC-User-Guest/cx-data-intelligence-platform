@@ -18,6 +18,10 @@ This repository delivers a production-grade MVP that correlates customer sentime
 - **Newman pre-ingestion contract gating** to enforce API compatibility
 - **Terraform-backed reproducibility** for core infrastructure (BigQuery, IAM, datasets)
 - **Bruin SQL DAG execution** for layered warehouse modeling (raw → staging → core → enrichment → dashboard)
+- **GitHub Actions CI/CD automation** for repeatable release gates and artifact builds
+- **Centralized audit event logging** with compliance baseline checks
+- **Synthetic load testing with thresholds** for parser and dedupe performance hardening
+- **Production remote Terraform state governance** with encrypted backend patterns and bootstrap templates
 
 ---
 
@@ -225,9 +229,12 @@ sequenceDiagram
 .
 ├── pipelines/                # Ingestion workloads and shared helpers
 ├── kestra/flows/             # Scheduled and dependency-triggered workflows
+├── .github/workflows/        # CI/CD and release automation workflows
 ├── bruin/assets/             # SQL assets (source, staging, core, enrichment, dashboard)
 ├── postman/                  # Live API contract collection and environments
 ├── terraform/                # Infrastructure baseline (APIs, datasets, IAM)
+│   └── state_bootstrap/      # Remote Terraform state bucket governance bootstrap
+├── scripts/                  # Compliance checks, synthetic load suite, and mock API utilities
 ├── dashboard/                # Static enterprise-facing operational UI (Nginx)
 ├── tests/                    # Unit tests for ingestion and reliability helpers
 ├── docs/                     # Operational runbook
@@ -248,6 +255,8 @@ sequenceDiagram
 | `docker run ... terraform fmt -check -recursive` | Check Terraform formatting |
 | `docker run ... terraform validate` | Validate Terraform configuration |
 | `newman run postman/live_ticket_api.postman_collection.json --env-var ticketsApiUrl=<url>` | Run API contract checks |
+| `python scripts/compliance_check.py --output compliance_report.json` | Verify hardening compliance controls |
+| `python scripts/synthetic_load_test.py --output synthetic_load_report.json` | Run high-volume synthetic performance thresholds |
 | `docker compose up --build -d` | Start all services |
 
 > **Production Terraform backend:**  
@@ -263,6 +272,8 @@ sequenceDiagram
 - **Kestra retries & timeouts** – Resilient orchestration for transient failures.
 - **Newman pre-ingestion contract gating** – Blocks ingestion on API contract regressions.
 - **Terraform-backed reproducibility** – Infrastructure dependencies (BigQuery datasets, IAM) are versioned and repeatable.
+- **Centralized audit logging** – Pipelines emit append-only JSONL audit events with run-level correlation IDs.
+- **Compliance integration** – Repository control baseline is machine-validated via scripts/compliance_check.py.
 
 ---
 
@@ -279,6 +290,17 @@ Baseline measurements from release preparation runs:
 | Bruin transform DAG | 100% assets | 8/8 succeeded, 21.445s | ✅ Pass |
 | Ticket ingestion runtime | < 5 min | ~49s | ✅ Pass |
 | Orders ingestion runtime | < 10 min | ~29s | ✅ Pass |
+
+Post-hardening validation snapshot (2026-04-07):
+
+| Metric | Target | Observed | Status |
+| :--- | :---: | :---: | :--- |
+| Unit tests | 100% pass | 12/12 passed in 8.51s | ✅ Pass |
+| Compliance controls | 100% pass | 7/7 controls passed | ✅ Pass |
+| Synthetic ticket normalize | <= 8.0s | 0.411s for 20,000 records | ✅ Pass |
+| Synthetic order normalize | <= 15.0s | 0.836s for 50,000 records | ✅ Pass |
+| Synthetic order dedupe | <= 8.0s | 0.156s for 50,000 records | ✅ Pass |
+| Runtime bootstrap | Services start cleanly | `docker compose up --build -d` passed locally | ✅ Pass |
 
 **Warehouse snapshot during end-to-end validation:**
 
@@ -334,8 +356,26 @@ The `terraform/` directory provisions:
 - **Datasets** – `raw_zone`, `staging`, `core`, `enrichment`, `dashboard`
 - **Optional runtime service account** and BigQuery project roles
 - Typed variables and outputs for environment-safe usage
+- `state_bootstrap/` templates to provision a governed remote state bucket (versioning, retention, public-access prevention)
 
-> **Note:** VM provisioning modules and remote state backend configuration are intentionally deferred as post-MVP hardening items.
+Use `backend.hcl.example` for production-safe backend initialization with KMS encryption and service-account impersonation fields.
+
+---
+
+## CI/CD Automation
+
+Implemented workflows:
+
+- `.github/workflows/ci.yml`
+  - Unit tests
+  - Terraform fmt/init/validate
+  - Newman API contract gating against a local synthetic endpoint
+  - Compliance baseline checks
+  - Synthetic load threshold suite
+- `.github/workflows/release.yml`
+  - Automated release build gates and versioned Docker artifact export
+
+All workflows are configured to avoid paid cloud execution by default.
 
 ---
 
@@ -378,7 +418,7 @@ This project is released under the **MIT License** – see the [`LICENSE`](LICEN
 
 ## Version
 
-**Current release:** `1.0.2`  
+**Current release:** `1.2.0`  
 Version sources: `VERSION` file and the README header.
 
 **Versioning scheme (Semantic Versioning):**
@@ -391,7 +431,7 @@ Version sources: `VERSION` file and the README header.
 
 ## Known Deferred Enterprise Hardening Items
 
-The following controls are intentionally deferred for future releases:
+The previously deferred controls have been implemented in this release:
 
 - Full CI/CD workflow automation in the repository
 - Centralized audit logging and compliance integration

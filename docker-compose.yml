@@ -3,13 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: "${PIPELINES_IMAGE:-platform-pipelines:1.1.0}"
+    image: "${PIPELINES_IMAGE:-platform-pipelines:1.2.0}"
     env_file:
       - .env
     restart: unless-stopped
 
   kestra:
-    image: "${KESTRA_IMAGE:-kestra/kestra:0.20.20}"
+    image: "${KESTRA_IMAGE:-kestra/kestra:v1.3.7}"
     container_name: kestra
     command: server local
     ports:
