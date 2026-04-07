@@ -1,0 +1,11 @@
+project_id = "your-gcp-project-id"
+region     = "europe-west1"
+
+bucket_name            = "replace-with-unique-tf-state-bucket"
+bucket_location        = "EU"
+retention_period_seconds = 604800
+kms_key_name           = "projects/PROJECT_ID/locations/LOCATION/keyRings/RING_NAME/cryptoKeys/KEY_NAME"
+
+labels = {
+  owner = "data-platform"
+}

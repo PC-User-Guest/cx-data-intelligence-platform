@@ -41,3 +41,5 @@ Thumbs.db
 .vscode/
 logs/runs
 logs/*.log
+compliance_report.json
+synthetic_load_report.json

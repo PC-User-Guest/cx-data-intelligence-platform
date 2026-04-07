@@ -1,0 +1,47 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-release-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m pytest -q
+
+      - name: Run compliance gate
+        run: python scripts/compliance_check.py --output compliance_report.json
+
+      - name: Run synthetic load gate
+        run: python scripts/synthetic_load_test.py --output synthetic_load_report.json
+
+      - name: Build runtime image
+        run: |
+          IMAGE_TAG=$(cat VERSION)
+          docker build -t platform-pipelines:${IMAGE_TAG} .
+          docker save platform-pipelines:${IMAGE_TAG} -o platform-pipelines-${IMAGE_TAG}.tar
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            compliance_report.json
+            synthetic_load_report.json
+            platform-pipelines-*.tar
+            VERSION

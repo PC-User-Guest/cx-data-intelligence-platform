@@ -9,6 +9,7 @@ import dlt  # type: ignore[import-not-found]
 import requests
 
 from pipelines.common.bigquery_config import configure_dlt_bigquery_env
+from pipelines.common.audit import emit_audit_event, new_run_id
 from pipelines.common.dead_letter import build_failed_record
 from pipelines.common.logging_utils import get_logger
 from pipelines.common.retry import retry_with_backoff
@@ -235,6 +236,16 @@ def run_pipeline() -> None:
     started = time.perf_counter()
     failed_records: list[dict[str, Any]] = []
     metrics = {"records_processed": 0, "records_failed": 0}
+    run_id = new_run_id()
+
+    emit_audit_event(
+        pipeline_name="tickets_pipeline",
+        run_id=run_id,
+        event_type="pipeline_started",
+        status="started",
+        compliance_tags=["soc2-cc7", "iso27001-a12"],
+        details={"dataset": RAW_DATASET, "source": TICKETS_API_URL},
+    )
 
     configure_dlt_bigquery_env()
 
@@ -244,22 +255,47 @@ def run_pipeline() -> None:
         dataset_name=RAW_DATASET,
     )
 
-    load_info = pipeline.run(tickets_resource(failed_records, metrics)())
+    try:
+        load_info = pipeline.run(tickets_resource(failed_records, metrics)())
 
-    if failed_records:
-        pipeline.run(failed_records_resource(failed_records)())
+        if failed_records:
+            pipeline.run(failed_records_resource(failed_records)())
 
-    elapsed_seconds = round(time.perf_counter() - started, 3)
-    LOGGER.info(
-        "Ticket ingestion finished",
-        extra={
-            "pipeline": "tickets_pipeline",
-            "records_processed": metrics["records_processed"],
-            "records_failed": metrics["records_failed"],
-            "elapsed_seconds": elapsed_seconds,
-            "load_summary": str(load_info),
-        },
-    )
+        elapsed_seconds = round(time.perf_counter() - started, 3)
+        LOGGER.info(
+            "Ticket ingestion finished",
+            extra={
+                "pipeline": "tickets_pipeline",
+                "run_id": run_id,
+                "records_processed": metrics["records_processed"],
+                "records_failed": metrics["records_failed"],
+                "elapsed_seconds": elapsed_seconds,
+                "load_summary": str(load_info),
+            },
+        )
+
+        emit_audit_event(
+            pipeline_name="tickets_pipeline",
+            run_id=run_id,
+            event_type="pipeline_completed",
+            status="success",
+            compliance_tags=["soc2-cc7", "iso27001-a12"],
+            details={
+                "records_processed": metrics["records_processed"],
+                "records_failed": metrics["records_failed"],
+                "elapsed_seconds": elapsed_seconds,
+            },
+        )
+    except Exception as exc:
+        emit_audit_event(
+            pipeline_name="tickets_pipeline",
+            run_id=run_id,
+            event_type="pipeline_completed",
+            status="failure",
+            compliance_tags=["soc2-cc7", "iso27001-a12"],
+            details={"error": str(exc), "records_failed": metrics["records_failed"]},
+        )
+        raise
 
 
 if __name__ == "__main__":

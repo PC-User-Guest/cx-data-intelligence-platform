@@ -1,2 +1,4 @@
 bucket = "replace-with-terraform-state-bucket"
 prefix = "cx-data-intelligence-platform/prod"
+kms_encryption_key = "projects/PROJECT_ID/locations/LOCATION/keyRings/RING_NAME/cryptoKeys/KEY_NAME"
+impersonate_service_account = "terraform-deployer@PROJECT_ID.iam.gserviceaccount.com"

@@ -23,6 +23,14 @@ This project follows a reliability-first workflow designed for data platform sys
 - terraform fmt -check -recursive (terraform folder)
 - terraform validate (terraform folder)
 - newman run for ticket API contract checks
+- python scripts/compliance_check.py --output compliance_report.json
+- python scripts/synthetic_load_test.py --output synthetic_load_report.json
+
+## 3.1 CI/CD Automation
+
+- Pull requests and pushes to main execute `.github/workflows/ci.yml`
+- Release artifact automation executes `.github/workflows/release.yml`
+- All automation runs local and synthetic checks only; no cloud deployment occurs in CI/CD by default
 
 ## 4. Data and Security Rules
 
@@ -30,6 +38,7 @@ This project follows a reliability-first workflow designed for data platform sys
 - Keep .gitignore protections intact for runtime artifacts and Terraform state
 - Use environment variables for endpoint and auth configuration
 - Preserve dead-letter and retry pathways in ingestion code
+- Preserve audit event emission pathways in pipeline execution code
 
 ## 5. PR Content Requirements
 
