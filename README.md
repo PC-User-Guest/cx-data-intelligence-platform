@@ -2,11 +2,55 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository delivers a production-grade MVP that correlates customer sentiment with operational delivery performance. The platform implements deterministic orchestration, layered warehouse modeling, idempotent ingestion, infrastructure as code, and API contract validation.
+This repository delivers a data platform that correlates customer sentiment with operational delivery performance. The solution implements deterministic orchestration, layered warehouse modeling, idempotent ingestion, infrastructure as code, and API contract validation.
 
 ---
+
 ## Snapshot of Live Dashboard
 <img width="1186" height="807" alt="image" src="https://github.com/user-attachments/assets/e8e64c4a-0dea-4596-8792-0154710f7800" />
+
+---
+## Overview
+**Problem Statement:**
+
+In most organizations, customer sentiment and operational delivery data evolve in parallel but disconnected systems. Customer support platforms continuously generate interaction signals such as tickets, chat transcripts, and social media mentions, while operations systems independently track order fulfillment, delivery timelines, and logistics failures. These systems are optimized for their own workflows rather than for shared analysis and do not naturally provide a unified view of customer experience and operational performance.
+
+This creates operational friction across multiple roles:
+
+- **Customer Experience Managers** struggle to identify which customers are becoming unhappy due to delayed or failed deliveries until escalation occurs, because sentiment signals are not automatically linked to operational events.
+- **Operations Managers** cannot reliably see downstream customer impact of fulfillment delays in real time, making it difficult to prioritize remediation beyond SLA-based metrics.
+- **Support Teams** lack context when handling tickets, often without knowing whether the customer is part of a broader operational incident.
+- **Analysts and Reporting Teams** spend significant time manually joining exports from multiple systems to reconstruct a partial view of impacted customers.
+- **Engineering Teams** face silent data quality risks where schema changes or ingestion failures propagate downstream without immediate visibility.
+
+This leads to:
+
+- **Delayed correlation of issues** – Links between operational failures (e.g., late deliveries) and sentiment degradation are typically identified hours or days after the event window.
+- **Reactive decision-making** – Customer outreach and operational escalation occur after dissatisfaction has already manifested, rather than during early risk signals.
+- **Manual reconciliation overhead** – Teams repeatedly assemble and align data across systems to identify affected customers and root causes.
+- **Fragile reporting pipelines** – Inconsistent upstream data formats or pipeline failures can degrade trust in dashboards without immediate detection.
+
+The core problem is the absence of a single, continuously updated and reliable pipeline that deterministically connects customer sentiment signals with operational delivery events at the data layer.
+
+**The Solution:**
+
+This project implements an end-to-end deterministic data platform that continuously ingests, validates, and correlates customer sentiment and operational data into a unified analytical model:
+
+- **Ingestion** – Incremental pipelines (dlt-based) load customer interaction data (API-driven tickets, chat-like events) and operational order data (CSV-based fulfillment records) into a centralized BigQuery lakehouse in raw form.
+- **Orchestration** – Kestra manages scheduled and dependency-aware workflows, ensuring ingestion, transformation, and dashboard refreshes execute in a controlled and repeatable manner.
+- **Validation** – API contract checks (Postman/Newman) run before ingestion to prevent schema drift from silently corrupting downstream datasets.
+- **Transformation** – SQL-based transformation models (bruin) standardize, clean, and join sentiment and operational datasets to produce business-ready entities such as delayed-order customers with negative sentiment signals and aggregated daily risk metrics.
+- **Serving layer** – A generated dashboard exposes derived datasets (e.g., high-risk customers and sentiment vs SLA correlations) for operational decision-making.
+
+**The Outcome:**
+
+- **Reduced detection time for CX and Operations teams** – Customer risk signals (negative sentiment + operational delay correlation) are surfaced within a consistent 15–30 minute ingestion and transformation window, reducing reliance on delayed reporting cycles.
+- **Actionable customer intelligence** – Teams can directly identify high-risk customers requiring proactive outreach instead of reconstructing insights manually across systems.
+- **Elimination of manual data stitching** – Analysts and reporting teams no longer need to merge exports from multiple systems to understand operational impact on customers.
+- **Operational visibility for leadership** – CX and Operations leaders gain a continuously updated view of how fulfillment performance is affecting customer sentiment trends.
+- **Deterministic and observable pipelines** – All ingestion and transformation steps are idempotent, retry-aware, and visible through orchestration logs, reducing silent failure risk and improving trust in outputs.
+
+The system establishes a consistent operational layer that allows CX, Operations, and Analytics stakeholders to detect and act on customer-impacting operational issues within defined latency bounds. It provides a foundation for transitioning toward fully event-driven real-time architectures while maintaining the reliability, cost constraints, and simplicity of batch and micro-batch processing at MVP stage.
 
 ---
 
@@ -432,9 +476,10 @@ Version sources: `VERSION` file and the README header.
 
 ## Known Deferred Enterprise Hardening Items
 
-The previously deferred controls have been implemented in this release:
+Current architecture remains optimized for deterministic batch and micro-batch processing; streaming capabilities are deferred for a future iteration.
 
-- Full CI/CD workflow automation in the repository
-- Centralized audit logging and compliance integration
-- High-volume synthetic load-testing suite with automated thresholds
-- Production-grade remote Terraform state governance
+- **Event streaming backbone** – Introduce an event streaming platform such as Apache Kafka or Google Cloud Pub/Sub to support continuous, event-driven ingestion in place of scheduled polling.
+- **Stream processing layer** – Integrate a processing engine such as Apache Flink or Apache Spark Structured Streaming for low-latency, stateful computations and windowed aggregations.
+- **Event-driven orchestration** – Extend Kestra to support event-based triggers alongside existing time-based schedules.
+- **Streaming observability and reliability** – Add consumer lag monitoring, checkpointing visibility, and dead-letter handling at the streaming layer.
+- **Schema evolution and governance** – Introduce schema registry and compatibility validation for event payloads, extending current contract governance practices.
