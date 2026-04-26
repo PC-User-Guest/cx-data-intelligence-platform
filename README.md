@@ -463,7 +463,7 @@ This project is released under the **MIT License** – see the [`LICENSE`](LICEN
 
 ## Version
 
-**Current release:** `1.2.0`  
+**Current release:** `1.3.0`  
 Version sources: `VERSION` file and the README header.
 
 **Versioning scheme (Semantic Versioning):**
