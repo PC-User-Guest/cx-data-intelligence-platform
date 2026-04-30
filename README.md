@@ -73,6 +73,7 @@ The system establishes a consistent operational layer that allows CX, Operations
 ## Architecture
 
 ```mermaid
+
 flowchart LR
   subgraph Sources
     A1[Ticket API]
@@ -156,6 +157,7 @@ flowchart LR
 ## Release Lifecycle View
 
 ```mermaid
+
 flowchart TD
     A([Start]) --> B[Implement feature]
     B --> C[Run local validation gates]
@@ -463,7 +465,7 @@ This project is released under the **MIT License** – see the [`LICENSE`](LICEN
 
 ## Version
 
-**Current release:** `1.3.0`  
+**Current release:** `1.3.1`  
 Version sources: `VERSION` file and the README header.
 
 **Versioning scheme (Semantic Versioning):**
